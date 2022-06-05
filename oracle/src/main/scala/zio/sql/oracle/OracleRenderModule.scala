@@ -339,7 +339,7 @@ trait OracleRenderModule extends OracleSqlModule { self =>
                 builder.append(value)
                 ()
               case StandardType.InstantType(formatter)        =>
-                builder.append(s"'${formatter.format(value.asInstanceOf[Instant])}'")
+                builder.append(s"TIMESTAMP '${formatter.format(value.asInstanceOf[Instant])}'")
                 ()
               case CharType                                   =>
                 builder.append(s"'${value}'")

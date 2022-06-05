@@ -170,7 +170,7 @@ object OracleSqlModuleSpec extends OracleRunnableSpec with ShopSchema {
 
         val delete = deleteFrom(allTypes).where(id === row._1)
 
-        println(insert)
+        println(renderInsert(insert))
 
         for {
           _ <- execute(insert)
@@ -178,6 +178,6 @@ object OracleSqlModuleSpec extends OracleRunnableSpec with ShopSchema {
           _ <- execute(delete)
         } yield assert(result)(isSome(equalTo(row)))
       }
-    } @@ samples(5) @@ retries(0)
+    } @@ samples(5) @@ retries(0) @@ shrinks(0)
   ) @@ sequential
 }
