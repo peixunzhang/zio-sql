@@ -31,7 +31,7 @@ trait OracleSqlModule extends Sql { self =>
             r => Right(r)
           )
     }
-    implicit case object TDuration extends OracleTypeTag[Duration] {
+    implicit case object TDuration  extends OracleTypeTag[Duration]  {
       def decode(column: Int, resultSet: ResultSet): Either[DecodingError, Duration] =
         Try(Duration.parse(resultSet.getString(column)))
           .fold(
@@ -46,7 +46,7 @@ trait OracleSqlModule extends Sql { self =>
   }
 
   implicit val instantSchema =
-    Schema.primitive[Instant](zio.schema.StandardType.InstantType(DateTimeFormatter.ISO_INSTANT))
+    Schema.primitive[Instant](zio.schema.StandardType.InstantType(DateTimeFormatter.ISO_OFFSET_DATE_TIME))
 
   implicit val localDateSchema =
     Schema.primitive[LocalDate](zio.schema.StandardType.LocalDateType(DateTimeFormatter.ISO_LOCAL_DATE))

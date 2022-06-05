@@ -3,7 +3,6 @@ package zio.sql.oracle
 import zio.schema.Schema
 import zio.schema.DynamicValue
 import zio.schema.StandardType
-import java.time.format.DateTimeFormatter
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -12,7 +11,7 @@ import java.time.OffsetTime
 import java.time.ZonedDateTime
 import zio.sql.driver.Renderer
 import zio.sql.driver.Renderer.Extensions
-
+import zio.Chunk
 import scala.collection.mutable
 import java.time.OffsetDateTime
 import java.time.YearMonth
@@ -341,7 +340,9 @@ trait OracleRenderModule extends OracleSqlModule { self =>
                 builder.append(value)
                 ()
               case StandardType.InstantType(formatter)        =>
-                builder.append(s"TIMESTAMP '${formatter.format(value.asInstanceOf[Instant])}'")
+                builder.append(
+                  s"TO_TIMESTAMP_TZ('${formatter.format(value.asInstanceOf[Instant])}', 'SYYYY-MM-DD\"T\"HH24:MI:SS.FF9TZH:TZM')"
+                )
                 ()
               case CharType                                   =>
                 builder.append(s"'${value}'")
@@ -350,23 +351,33 @@ trait OracleRenderModule extends OracleSqlModule { self =>
                 builder.append(value)
                 ()
               case BinaryType                                 =>
-                builder.append(s"'${value}'")
+                val chunk = value.asInstanceOf[Chunk[Byte]]
+                builder.append("'")
+                for (b <- chunk)
+                  builder.append(String.format("%02x", b))
+                builder.append(s"'")
                 ()
               case StandardType.LocalDateTimeType(formatter)  =>
-                builder.append(s"TIMESTAMP '${formatter.format(value.asInstanceOf[LocalDateTime])}'")
+                builder.append(
+                  s"TO_TIMESTAMP('${formatter.format(value.asInstanceOf[LocalDateTime])}', 'SYYYY-MM-DD\"T\"HH24:MI:SS.FF9')"
+                )
                 ()
               case StandardType.YearMonthType                 =>
                 val yearMonth = value.asInstanceOf[YearMonth]
-                builder.append(s"INTERVAL '${yearMonth.getYear()}-${yearMonth.getMonth()}' YEAR TO MONTH")
+                builder.append(s"INTERVAL '${yearMonth.getYear}-${yearMonth.getMonth.getValue}' YEAR(4) TO MONTH")
                 ()
               case DoubleType                                 =>
                 builder.append(value)
                 ()
               case StandardType.OffsetDateTimeType(formatter) =>
-                builder.append(s"TIMESTAMP '${formatter.format(value.asInstanceOf[OffsetDateTime])}'")
+                builder.append(
+                  s"TO_TIMESTAMP_TZ('${formatter.format(value.asInstanceOf[OffsetDateTime])}', 'SYYYY-MM-DD\"T\"HH24:MI:SS.FF9TZH:TZM')"
+                )
                 ()
-              case StandardType.ZonedDateTimeType(_)          =>
-                builder.append(s"TIMESTAMP '${DateTimeFormatter.ISO_OFFSET_DATE_TIME.format(value.asInstanceOf[ZonedDateTime])}'")
+              case StandardType.ZonedDateTimeType(formatter)  =>
+                builder.append(
+                  s"TO_TIMESTAMP_TZ('${formatter.format(value.asInstanceOf[ZonedDateTime])}', 'SYYYY-MM-DD\"T\"HH24:MI:SS.FF9 TZR')"
+                )
                 ()
               case UUIDType                                   =>
                 builder.append(s"'${value}'")
@@ -374,11 +385,16 @@ trait OracleRenderModule extends OracleSqlModule { self =>
               case ShortType                                  =>
                 builder.append(value)
                 ()
-              case StandardType.LocalTimeType(formatter)      =>
-                builder.append(s"DATE '${formatter.format(value.asInstanceOf[LocalTime])}'")
+              case StandardType.LocalTimeType(_)              =>
+                val localTime = value.asInstanceOf[LocalTime]
+                builder.append(
+                  s"INTERVAL '${localTime.getHour}:${localTime.getMinute}:${localTime.getSecond}.${localTime.getNano}' HOUR TO SECOND(9)"
+                )
                 ()
               case StandardType.OffsetTimeType(formatter)     =>
-                builder.append(s"TIMESTAMP '${formatter.format(value.asInstanceOf[OffsetTime])}'")
+                builder.append(
+                  s"TO_TIMESTAMP_TZ('${formatter.format(value.asInstanceOf[OffsetTime])}', 'HH24:MI:SS.FF9TZH:TZM')"
+                )
                 ()
               case LongType                                   =>
                 builder.append(value)
@@ -402,9 +418,14 @@ trait OracleRenderModule extends OracleSqlModule { self =>
                 ()
               case StandardType.DurationType                  =>
                 val duration = value.asInstanceOf[Duration]
-                builder.append(s"INTERVAL '${duration.getSeconds()}.${duration.getNano()}' SECOND")
+                val days     = duration.toDays()
+                val hours    = duration.toHours()   % 24
+                val minutes  = duration.toMinutes() % 60
+                val seconds  = duration.getSeconds  % 60
+                val nanos    = duration.getNano
+                builder.append(s"INTERVAL '$days $hours:$minutes:$seconds.$nanos' DAY(9) TO SECOND(9)")
                 ()
-              case _ =>
+              case _                                          =>
                 throw new IllegalStateException("unsupported")
             }
           case None    => ()

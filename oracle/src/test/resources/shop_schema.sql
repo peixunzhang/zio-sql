@@ -40,18 +40,18 @@ create table order_details
 create table all_types
 (
     id varchar(36) not null primary key,
-    bytearray blob not null,
-    bigdecimal number(15,2) not null,
+    bytearray blob,
+    bigdecimal number not null,
     boolean_ number(1) not null,
-    char_ varchar(2) not null,
-    double_ float not null,
+    char_ varchar(4) not null,
+    double_ number not null,
     float_ float not null,
-    instant timestamp not null,
+    instant timestamp with time zone not null,
     int_ integer not null,
     optional_int integer,
     localdate date not null,
     localdatetime timestamp not null,
-    localtime date not null,
+    localtime interval day to second not null,
     long_ integer not null,
     offsetdatetime timestamp with time zone not null,
     offsettime timestamp with time zone not null,
@@ -59,8 +59,8 @@ create table all_types
     string clob not null,
     uuid varchar(36) not null,
     zoneddatetime timestamp with time zone not null,
-    yearmonth interval year to month not null,
-    duration interval day to second not null
+    yearmonth interval year(4) to month not null,
+    duration interval day(9) to second(9) not null
 );
 
 insert all

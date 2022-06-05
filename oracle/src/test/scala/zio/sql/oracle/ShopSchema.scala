@@ -1,6 +1,5 @@
 package zio.sql.oracle
 
-
 trait ShopSchema extends OracleSqlModule { self =>
   import self.ColumnSet._
 
@@ -64,9 +63,31 @@ trait ShopSchema extends OracleSqlModule { self =>
         uuid("uuid") ++
         zonedDateTime("zoneddatetime") ++
         yearMonth("yearmonth") ++
-        duration("duration")
-      ).table("all_types")
+        duration("duration")).table("all_types")
 
-    val (id, bytearrayCol, bigdecimalCol, booleanCol, charCol, doubleCol, floatCol, instantCol, intCol, optionalIntCol, localdateCol, localdatetimeCol, localtimeCol, longCol, offsetdatetimeCol, offsettimeCol, shortCol, stringCol, uuidCol, zonedDatetimeCol, yearMonthCol, durationCol) = allTypes.columns
+    val (
+      id,
+      bytearrayCol,
+      bigdecimalCol,
+      booleanCol,
+      charCol,
+      doubleCol,
+      floatCol,
+      instantCol,
+      intCol,
+      optionalIntCol,
+      localdateCol,
+      localdatetimeCol,
+      localtimeCol,
+      longCol,
+      offsetdatetimeCol,
+      offsettimeCol,
+      shortCol,
+      stringCol,
+      uuidCol,
+      zonedDatetimeCol,
+      yearMonthCol,
+      durationCol
+    ) = allTypes.columns
   }
 }
