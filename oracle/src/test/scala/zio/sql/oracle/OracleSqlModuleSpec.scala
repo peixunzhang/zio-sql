@@ -8,17 +8,44 @@ import scala.language.postfixOps
 import java.util.UUID
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
-import zio.schema._
+import zio.schema.Schema
+import java.time.ZonedDateTime
 
-object OracleModuleSpec extends OracleRunnableSpec with ShopSchema {
+object OracleSqlModuleSpec extends OracleRunnableSpec with ShopSchema {
 
   import Customers._
   import Orders._
 
-  override def specLayered = suite("Oracle module")(
+  override def specLayered: Spec[SqlDriver, Exception] = suite("Oracle module")(
+    test("Can update selected rows") {
+
+      /**
+       * UPDATE customers SET customers.first_name = 'Antek'
+       * WHERE 1 = 1 and customers.verified = 0 and customers.verified <> 1
+       */
+      val query =
+        update(customers)
+          .set(fName, "Antek")
+          .where(verified isNotTrue)
+          .where(verified <> true) // we intentionally verify two syntax variants
+
+      assertZIO(execute(query))(equalTo(1))
+    },
+    test("Can update all rows") {
+
+      /**
+       * UPDATE customers SET customers.first_name = 'Antek' WHERE 1 = 1
+       */
+      val query = update(customers).set(fName, "Antek")
+
+      assertZIO(execute(query))(equalTo(5))
+    },
     test("Can delete from single table with a condition") {
+
+      /**
+       * DELETE FROM customers WHERE customers.verified = 0
+       */
       val query = deleteFrom(customers) where (verified isNotTrue)
-      println(renderDelete(query))
 
       val expected = 1
       val result   = execute(query)
@@ -26,8 +53,11 @@ object OracleModuleSpec extends OracleRunnableSpec with ShopSchema {
       assertZIO(result)(equalTo(expected))
     },
     test("Can delete all from a single table") {
+
+      /**
+       * DELETE FROM customers
+       */
       val query = deleteFrom(customers)
-      println(renderDelete(query))
 
       val expected = 4
       val result   = execute(query)
@@ -40,10 +70,11 @@ object OracleModuleSpec extends OracleRunnableSpec with ShopSchema {
         dateOfBirth: LocalDate,
         firstName: String,
         lastName: String,
-        verified: Boolean
+        verified: Boolean,
+        createdAt: ZonedDateTime
       )
       implicit val customerRowSchema =
-        Schema.CaseClass5[UUID, LocalDate, String, String, Boolean, CustomerRow](
+        Schema.CaseClass6[UUID, LocalDate, String, String, Boolean, ZonedDateTime, CustomerRow](
           Schema.Field("id", Schema.primitive[UUID](zio.schema.StandardType.UUIDType)),
           Schema.Field(
             "dateOfBirth",
@@ -52,12 +83,14 @@ object OracleModuleSpec extends OracleRunnableSpec with ShopSchema {
           Schema.Field("firstName", Schema.primitive[String](zio.schema.StandardType.StringType)),
           Schema.Field("lastName", Schema.primitive[String](zio.schema.StandardType.StringType)),
           Schema.Field("verified", Schema.primitive[Boolean](zio.schema.StandardType.BoolType)),
+          Schema.Field("createdAt", Schema.primitive[ZonedDateTime](zio.schema.StandardType.ZonedDateTimeType(DateTimeFormatter.ISO_ZONED_DATE_TIME))),
           CustomerRow.apply,
           _.id,
           _.dateOfBirth,
           _.firstName,
           _.lastName,
-          _.verified
+          _.verified,
+          _.createdAt
         )
 
       val rows = List(
