@@ -6,10 +6,11 @@ import zio.test._
 
 import scala.language.postfixOps
 import java.util.UUID
-import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import zio.schema.Schema
 import zio.prelude._
+import java.time.{Year, LocalDate, LocalDateTime, Month, YearMonth, ZoneOffset, ZonedDateTime}
+
 object OracleSqlModuleSpec extends OracleRunnableSpec with ShopSchema {
 
   import Customers._
@@ -103,8 +104,6 @@ object OracleSqlModuleSpec extends OracleRunnableSpec with ShopSchema {
         verified
       ).values(rows)
 
-      println(renderInsert(command))
-
       assertZIO(execute(command))(equalTo(2))
     },
     test("Can insert tuples") {
@@ -133,6 +132,35 @@ object OracleSqlModuleSpec extends OracleRunnableSpec with ShopSchema {
       assertZIO(execute(command))(equalTo(2))
     },
     test("Can insert and read all supported types") {
+      val sqlMinDateTime = LocalDateTime.of(-4713, 1, 1, 0, 0)
+      val sqlMaxDateTime = LocalDateTime.of(9999, 12, 31, 23, 59)
+
+      val sqlYear = Gen.int(-4713, 9999).map(Year.of)
+
+      val sqlLocalDate = for {
+        year  <- sqlYear
+        month <- Gen.int(1, 12)
+        maxLen = if (!year.isLeap && month == 2) 28 else Month.of(month).maxLength
+        day   <- Gen.int(1, maxLen)
+      } yield LocalDate.of(year.getValue, month, day)
+
+      val sqlYearMonth = for {
+        year  <- sqlYear
+        month <- Gen.int(1, 12)
+      } yield YearMonth.of(year.getValue(), month)
+
+      val sqlLocalDateTime =
+        Gen.localDateTime(sqlMinDateTime, sqlMaxDateTime)
+
+      val sqlZonedDateTime = for {
+        dateTime <- sqlLocalDateTime
+        zoneId   <- Gen.zoneId
+      } yield ZonedDateTime.of(dateTime, zoneId)
+
+      val sqlOffsetDateTime =
+        Gen.offsetDateTime(sqlMinDateTime.atOffset(ZoneOffset.MIN), sqlMaxDateTime.atOffset(ZoneOffset.MAX))
+
+
       val gen = (
         Gen.uuid,
         Gen.chunkOf(Gen.byte),
@@ -144,17 +172,17 @@ object OracleSqlModuleSpec extends OracleRunnableSpec with ShopSchema {
         Gen.instant,
         Gen.int,
         Gen.option(Gen.int),
-        Gen.localDate,
-        Gen.localDateTime,
+        sqlLocalDate,
+        sqlLocalDateTime,
         Gen.localTime,
         Gen.long,
-        Gen.offsetDateTime,
+        sqlOffsetDateTime,
         Gen.offsetTime,
         Gen.short,
         Gen.string,
         Gen.uuid,
-        Gen.zonedDateTime,
-        Gen.yearMonth,
+        sqlZonedDateTime,
+        sqlYearMonth,
         Gen.finiteDuration
       ).tupleN
       check(gen) { row =>
