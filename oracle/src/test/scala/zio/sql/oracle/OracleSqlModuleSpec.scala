@@ -9,13 +9,14 @@ import java.util.UUID
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import zio.schema.Schema
-
+import zio.prelude._
 object OracleSqlModuleSpec extends OracleRunnableSpec with ShopSchema {
 
   import Customers._
   import Orders._
+  import AllTypes._
 
-  override def specLayered: Spec[SqlDriver, Exception] = suite("Oracle module")(
+  override def specLayered: Spec[SqlDriver with TestConfig with Sized, Exception] = suite("Oracle module")(
     test("Can update selected rows") {
 
       /**
@@ -130,6 +131,53 @@ object OracleSqlModuleSpec extends OracleRunnableSpec with ShopSchema {
       println(renderInsert(command))
 
       assertZIO(execute(command))(equalTo(2))
-    }
+    },
+    test("Can insert and read all supported types") {
+      val gen = (
+        Gen.uuid,
+        Gen.chunkOf(Gen.byte),
+        Gen.bigDecimal(Long.MinValue, Long.MaxValue),
+        Gen.boolean,
+        Gen.char,
+        Gen.double,
+        Gen.float,
+        Gen.instant,
+        Gen.int,
+        Gen.option(Gen.int),
+        Gen.localDate,
+        Gen.localDateTime,
+        Gen.localTime,
+        Gen.long,
+        Gen.offsetDateTime,
+        Gen.offsetTime,
+        Gen.short,
+        Gen.string,
+        Gen.uuid,
+        Gen.zonedDateTime,
+        Gen.yearMonth,
+        Gen.finiteDuration
+      ).tupleN
+      check(gen) { row =>
+
+        val insert = insertInto(allTypes)(
+          id, bytearrayCol, bigdecimalCol, booleanCol, charCol, doubleCol, floatCol, instantCol, intCol, optionalIntCol, localdateCol, localdatetimeCol, localtimeCol, longCol, offsetdatetimeCol, offsettimeCol, shortCol, stringCol, uuidCol, zonedDatetimeCol, yearMonthCol, durationCol
+        ).values(row)
+
+        val read =
+          select(
+            id ++ bytearrayCol ++ bigdecimalCol ++ booleanCol ++ charCol ++ doubleCol ++ floatCol ++ instantCol ++ intCol ++ optionalIntCol ++ localdateCol ++ localdatetimeCol ++ localtimeCol ++ longCol ++ offsetdatetimeCol ++ offsettimeCol ++ shortCol ++ stringCol ++ uuidCol ++ zonedDatetimeCol ++ yearMonthCol ++ durationCol
+          ).from(allTypes)
+
+        val delete = deleteFrom(allTypes).where(id === row._1)
+
+        println(insert)
+
+        for {
+          _ <- execute(insert)
+          result <- execute(read).runHead
+          _ <- execute(delete)
+        } yield assert(result)(isSome(equalTo(row)))
+      }
+    } @@ samples(5) @@ retries(0)
   ) @@ sequential
 }

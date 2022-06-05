@@ -347,20 +347,11 @@ trait OracleRenderModule extends OracleSqlModule { self =>
               case IntType                                    =>
                 builder.append(value)
                 ()
-              case StandardType.MonthDayType                  =>
-                builder.append(s"'${value}'")
-                ()
               case BinaryType                                 =>
                 builder.append(s"'${value}'")
                 ()
-              case StandardType.MonthType                     =>
-                builder.append(s"'${value}'")
-                ()
               case StandardType.LocalDateTimeType(formatter)  =>
-                builder.append(s"DATE '${formatter.format(value.asInstanceOf[LocalDateTime])}'")
-                ()
-              case UnitType                                   =>
-                builder.append("null") // None is encoded as Schema[Unit].transform(_ => None, _ => ())
+                builder.append(s"'${formatter.format(value.asInstanceOf[LocalDateTime])}'")
                 ()
               case StandardType.YearMonthType                 =>
                 builder.append(s"'${value}'")
@@ -368,22 +359,13 @@ trait OracleRenderModule extends OracleSqlModule { self =>
               case DoubleType                                 =>
                 builder.append(value)
                 ()
-              case StandardType.YearType                      =>
-                builder.append(s"'${value}'")
-                ()
               case StandardType.OffsetDateTimeType(formatter) =>
                 builder.append(s"'${formatter.format(value.asInstanceOf[OffsetDateTime])}'")
                 ()
               case StandardType.ZonedDateTimeType(_)          =>
                 builder.append(s"'${DateTimeFormatter.ISO_OFFSET_DATE_TIME.format(value.asInstanceOf[ZonedDateTime])}'")
                 ()
-              case BigIntegerType                             =>
-                builder.append(s"'${value}'")
-                ()
               case UUIDType                                   =>
-                builder.append(s"'${value}'")
-                ()
-              case StandardType.ZoneOffsetType                =>
                 builder.append(s"'${value}'")
                 ()
               case ShortType                                  =>
@@ -401,14 +383,8 @@ trait OracleRenderModule extends OracleSqlModule { self =>
               case StringType                                 =>
                 builder.append(s"'${value}'")
                 ()
-              case StandardType.PeriodType                    =>
-                builder.append(s"'${value}'")
-                ()
-              case StandardType.ZoneIdType                    =>
-                builder.append(s"'${value}'")
-                ()
               case StandardType.LocalDateType(formatter)      =>
-                builder.append(s"'${formatter.format(value.asInstanceOf[LocalDate])}'")
+                builder.append(s"DATE '${formatter.format(value.asInstanceOf[LocalDate])}'")
                 ()
               case BoolType                                   =>
                 val b = value.asInstanceOf[Boolean]
@@ -418,15 +394,14 @@ trait OracleRenderModule extends OracleSqlModule { self =>
                   builder.append('0')
                 }
                 ()
-              case DayOfWeekType                              =>
-                builder.append(s"'${value}'")
-                ()
               case FloatType                                  =>
                 builder.append(value)
                 ()
               case StandardType.DurationType                  =>
                 builder.append(s"'${value}'")
                 ()
+              case _ =>
+                throw new IllegalStateException("unsupported")
             }
           case None    => ()
         }
